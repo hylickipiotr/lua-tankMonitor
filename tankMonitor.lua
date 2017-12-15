@@ -1,85 +1,68 @@
-ccterm = assert(loadfile "ccterm.lua")()
+CCTermApi = loadfile('ccterm.lua')()
+BlockAPI = loadfile('Block.lua')()
+TankAPI = loadfile('Tank.lua')()
+Monitor = loadfile('Monitor.lua')()
 
 local TANK = {}
 
-function percentageValue(maxStorage,value)
-  return math.floor(tonumber(value/maxStorage*100))
-end
-
-function hasInternalLiquidStorage(p)
-  return peripheral.wrap(p).getTankInfo
-end
-
-function getTankPeripheralNames()
-  tanks = {}
-  for i,v in ipairs(peripheral.getNames()) do
-    if hasInternalLiquidStorage(v) then
-      table.insert(tanks,v)
-    end
-  end
-  return tanks
-end
-
-function getTankInfo(name)
-  return peripheral.wrap(name).getTankInfo('')
-end
-
-function isLiquidInTank(tankInfo)
-  return tankInfo.amount
-end
-
-function updateLiquidSotregeValueInTank()
-  tanksInfo = {}
-  for i,peripheralName in ipairs(getTankPeripheralNames()) do
-    for j,internalTankInfo in ipairs(getTankInfo(peripheralName)) do
-      if isLiquidInTank(internalTankInfo) then
-        table.insert(tanksInfo,
-          {
-            ["peripheralName"]=peripheralName,
-            ["idInternalTank"]=j,
-            ["ravName"]=internalTankInfo.ravName,
-            ["name"]=internalTankInfo.name,
-            ["capacity"]=internalTankInfo.capacity,
-            ["amount"]=internalTankInfo.amount,
-            ["percent"]=percentageValue(internalTankInfo.capacity,internalTankInfo.amount)
-          })
-      else
-        table.insert(tanksInfo,
-          {
-            ["peripheralName"]=peripheralName,
-            ["idInternalTank"]=j,
-            ["ravName"]="NoLiquid",
-            ["name"]="NoLiquid",
-            ["capacity"]=internalTankInfo.capacity,
-            ["amount"]=0,
-            ["percent"]=0
-          })
+local function logic ()
+  for i,peripheralName in ipairs(peripheral.getNames()) do
+    _block = newBlock(peripheralName)
+    if _block.hasInternalLiquidStorage() then
+      for j,internalTank in ipairs(_block.getTankInfo('')) do
+        _tank = newTank(peripheralName, internalTank)
+        _tank.idInternalTank = j
+        table.insert(TANK, _tank)
       end
     end
   end
-  return tanksInfo
 end
 
-function convertTableTankInformation(tankInfo)
-  newTankInfo = {}
-  
-  return newTankInfo
-end
-
-function displayLiquidStorageValueInTanksOnTerminal()
-  clear()
+local function displayLiquidStorageValueInTanksOnTerminal()
+  ccterm.clear()
   for i,tankInfo in ipairs(TANK) do
     str = ""
     for k,v in pairs(tankInfo) do
-      str = str.. reduceString(tostring(v),15).. "/"
+      str = str.. ccterm.reduceString(tostring(v),15).. "/"
     end
     print(str)
   end
 end
 
-function main()
-  TANK = updateLiquidSotregeValueInTank()
-  displayLiquidStorageValueInTanksOnTerminal()
+local function displayLiquidStorageValueInTanksOnMonitor()
+  monitor = newMonitor("top")
+  monitor.clearAdv()
+
+  for i,v in ipairs(TANK) do
+    local percent = v.percent
+    local spaceBeetwenTankBoxs = 1
+    local tankBoxWidth = (monitor.width-(spaceBeetwenTankBoxs*(#TANK-1))-((monitor.width-(spaceBeetwenTankBoxs*(#TANK-1)))%#TANK))/#TANK
+    local tankBoxWithSpaceLength = (#TANK*tankBoxWidth)+((#TANK-1)*spaceBeetwenTankBoxs)
+    local spaceBeforeTankBox = ((monitor.width-tankBoxWithSpaceLength)-1*((monitor.width-tankBoxWithSpaceLength)%2))/2
+    if tankBoxWidth >= 4 then displayPercentageValueOnTop=1 else displayPercentageValueOnTop=0 end
+    local tankBoxHeight = math.floor((percent/100)*(monitor.height-displayPercentageValueOnTop))
+    local tankBoxStartPositionX = spaceBeforeTankBox+(spaceBeetwenTankBoxs*(i-1))+(tankBoxWidth*(i-1)+1)
+    local percentageStringLength = #tostring(percent)+1
+    local spaceBeforepercentageValueText = ((tankBoxWidth-percentageStringLength)-1*((tankBoxWidth-percentageStringLength)%2))/2
+    local percentageValueTextPositionX = tankBoxStartPositionX+spaceBeforepercentageValueText
+    local percentageValueTextPositionY = monitor.height-tankBoxHeight
+
+    print(percentageValueTextPositionX.. " "..  percentageValueTextPositionY)
+    monitor.drawBox(tankBoxStartPositionX,monitor.height,tankBoxWidth,tankBoxHeight,colors.red)
+    if displayPercentageValueOnTop == 1 then
+      monitor.writeAdv(percent.. "%", percentageValueTextPositionX, percentageValueTextPositionY)
+    end
+  end
+end
+
+local function main()
+  while true do
+    TANK = {}
+    logic()
+    displayLiquidStorageValueInTanksOnTerminal()
+    displayLiquidStorageValueInTanksOnMonitor()
+    sleep(0.2)
+  end
 end
 
 main()
