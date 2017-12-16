@@ -1,16 +1,33 @@
-local peripheralName
+Block = {}
 
-newBlock = function(_peripheralName)
-  peripheralName = _peripheralName
-  return {
-    peripheralName = peripheralName,
+function Block.new(peripheralName)
+  local self = {}
 
-    hasInternalLiquidStorage = function()
-      return peripheral.wrap(peripheralName).getTankInfo
-    end,
+  self.peripheralName = peripheralName
 
-    getTankInfo = function()
-      return peripheral.wrap(peripheralName).getTankInfo('')
-    end,
-  }
+  function self.hasLiquidStorage()
+    return peripheral.wrap(self.peripheralName).getTankInfo
+  end
+
+  function self.getLiquidStorages()
+    return peripheral.wrap(self.peripheralName).getTankInfo('')
+  end
+
+  return self
 end
+
+-- Block = function(_peripheralName)
+--   local peripheralName = _peripheralName
+--
+--   return {
+--     peripheralName = peripheralName,
+--
+--     hasInternalLiquidStorage = function()
+--       return peripheral.wrap(peripheralName).getTankInfo
+--     end,
+--
+--     getTankInfo = function()
+--       return peripheral.wrap(peripheralName).getTankInfo('')
+--     end,
+--   }
+-- end

@@ -1,4 +1,4 @@
-newMonitor = function(peripheralName)
+Monitor = function(peripheralName)
   local mon = peripheral.wrap(peripheralName)
 
   mon.width, mon.height = mon.getSize()

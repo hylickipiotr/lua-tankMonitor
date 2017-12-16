@@ -1,40 +1,55 @@
-CCTermApi = loadfile('ccterm.lua')()
-BlockAPI = loadfile('Block.lua')()
-TankAPI = loadfile('Tank.lua')()
-Monitor = loadfile('Monitor.lua')()
+loadfile('Term.lua')()
+loadfile('String.lua')()
+loadfile('Block.lua')()
+loadfile('Tank.lua')()
+loadfile('Monitor.lua')()
 
 local TANK = {}
 
-local function logic ()
+local function logic()
+
   for i,peripheralName in ipairs(peripheral.getNames()) do
-    _block = newBlock(peripheralName)
-    if _block.hasInternalLiquidStorage() then
-      for j,internalTank in ipairs(_block.getTankInfo('')) do
-        _tank = newTank(peripheralName, internalTank)
-        _tank.idInternalTank = j
-        table.insert(TANK, _tank)
+    local block = Block.new(peripheralName)
+    if block.hasLiquidStorage() then
+      for j,internalTank in ipairs(block.getLiquidStorages()) do
+        local tank = Tank.new(internalTank)
+        tank.peripheralName = block.peripheralName
+        table.insert(TANK, tank)
       end
     end
   end
 end
 
-local function displayLiquidStorageValueInTanksOnTerminal()
-  ccterm.clear()
+local function displayLiquidStorageValueInTanksOnTerminal01()
+  term.clearAdv()
   for i,tankInfo in ipairs(TANK) do
     str = ""
     for k,v in pairs(tankInfo) do
-      str = str.. ccterm.reduceString(tostring(v),15).. "/"
+      str = str.. string.reduceString(tostring(v),15,"...").. "/"
+    end
+    print(str)
+  end
+end
+
+local function displayLiquidStorageValueInTanksOnTerminal()
+  term.clearAdv()
+  for i,tankInfo in ipairs(TANK) do
+    str = ""
+    for k,v in pairs(tankInfo) do
+      str = str.. string.reduceString(tostring(v),15,"...").. "/"
     end
     print(str)
   end
 end
 
 local function displayLiquidStorageValueInTanksOnMonitor()
-  monitor = newMonitor("top")
+  monitor = Monitor("top")
   monitor.clearAdv()
 
-  for i,v in ipairs(TANK) do
-    local percent = v.percent
+  for i,tank in ipairs(TANK) do
+    local percent = tank.getPercentageLiquidStorageValue()
+
+    --Calculate width, height and position of TankBox
     local spaceBeetwenTankBoxs = 1
     local tankBoxWidth = (monitor.width-(spaceBeetwenTankBoxs*(#TANK-1))-((monitor.width-(spaceBeetwenTankBoxs*(#TANK-1)))%#TANK))/#TANK
     local tankBoxWithSpaceLength = (#TANK*tankBoxWidth)+((#TANK-1)*spaceBeetwenTankBoxs)
@@ -42,12 +57,13 @@ local function displayLiquidStorageValueInTanksOnMonitor()
     if tankBoxWidth >= 4 then displayPercentageValueOnTop=1 else displayPercentageValueOnTop=0 end
     local tankBoxHeight = math.floor((percent/100)*(monitor.height-displayPercentageValueOnTop))
     local tankBoxStartPositionX = spaceBeforeTankBox+(spaceBeetwenTankBoxs*(i-1))+(tankBoxWidth*(i-1)+1)
+
+    --Calculate length and position of LiquidPercentageValue in interant tank
     local percentageStringLength = #tostring(percent)+1
     local spaceBeforepercentageValueText = ((tankBoxWidth-percentageStringLength)-1*((tankBoxWidth-percentageStringLength)%2))/2
     local percentageValueTextPositionX = tankBoxStartPositionX+spaceBeforepercentageValueText
     local percentageValueTextPositionY = monitor.height-tankBoxHeight
 
-    print(percentageValueTextPositionX.. " "..  percentageValueTextPositionY)
     monitor.drawBox(tankBoxStartPositionX,monitor.height,tankBoxWidth,tankBoxHeight,colors.red)
     if displayPercentageValueOnTop == 1 then
       monitor.writeAdv(percent.. "%", percentageValueTextPositionX, percentageValueTextPositionY)
@@ -61,7 +77,7 @@ local function main()
     logic()
     displayLiquidStorageValueInTanksOnTerminal()
     displayLiquidStorageValueInTanksOnMonitor()
-    sleep(0.2)
+    sleep(1)
   end
 end
 
