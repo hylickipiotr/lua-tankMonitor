@@ -1,10 +1,3 @@
-loadfile('Liquid.lua')()
-
-aaa = {}
-function aaa.new()
-  print("aaa.new test")
-end
-
 Tank = {}
 
 function Tank.new(tankInfo)
